@@ -10,11 +10,18 @@ const RegisterIntentHandler = {
             && Alexa.getIntentName(handlerInput.requestEnvelope) === 'RegisterIntent';
     },
     handle(handlerInput) {
-        const speakOutput = 'Register';
-        return handlerInput.responseBuilder
-            .speak(speakOutput)
-            //.reprompt('add a reprompt if you want to keep the session open for the user to respond')
-            .getResponse();
+        const senha = handlerInput.requestEnvelope.request.intent.slots.senha.value;
+        if (!senha) {
+            const speakOutput = 'Diga registrar a senha... e diga a sua senha';
+            return handlerInput.responseBuilder
+                .speak(speakOutput)
+                .getResponse();
+        } else {
+            const userId = handlerInput.requestEnvelope.context.System.user.userId
+            return handlerInput.responseBuilder
+                .speak(`A sua senha é ${senha}`)
+                .getResponse();
+        }
     }
 };
 
