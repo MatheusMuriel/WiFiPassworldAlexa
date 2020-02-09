@@ -3,6 +3,7 @@
 // session persistence, api calls, and more.
 const Alexa = require('ask-sdk-core');
 require('dotenv').config();
+const mongoose = require('mongoose');
 
 const RegisterIntentHandler = {
     canHandle(handlerInput) {
@@ -31,7 +32,32 @@ const QueryIntentHandler = {
             && Alexa.getIntentName(handlerInput.requestEnvelope) === 'QueryIntent';
     },
     handle(handlerInput) {
-        const speakOutput = 'Query';
+        // console.log(`Debug DotEnv ${process.env.MONGODB_URI}, ${process.env}`)
+        
+        mongoose.connect(process.env.MONGODB_URI, {useNewUrlParser: true});
+        var db = mongoose.connection;
+        db.on('error', console.error.bind(console, 'connection error:'));
+        db.once('open', function() {
+          // we're connected!
+          var kittySchema = new mongoose.Schema({
+              name: String
+            });
+            kittySchema.methods.speak = function () {
+              var greeting = this.name
+                ? "Meow name is " + this.name
+                : "I don't have a name";
+              console.log(greeting);
+            }
+            var Kitten = mongoose.model('Kitten', kittySchema);
+            var fluffy = new Kitten({ name: 'fluffy' });
+            fluffy.speak();
+            fluffy.save(function (err, fluffy) {
+                if (err) return console.error(err);
+                fluffy.speak();
+              });
+        });
+        
+        const speakOutput = `Query`;
         return handlerInput.responseBuilder
             .speak(speakOutput)
             //.reprompt('add a reprompt if you want to keep the session open for the user to respond')
