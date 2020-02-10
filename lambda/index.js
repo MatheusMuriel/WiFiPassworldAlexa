@@ -1,30 +1,16 @@
-// This sample demonstrates handling intents from an Alexa skill using the Alexa Skills Kit SDK (v2).
-// Please visit https://alexa.design/cookbook for additional examples on implementing slots, dialog management,
-// session persistence, api calls, and more.
-const Alexa = require('ask-sdk-core');
 require('dotenv').config();
+const Alexa = require('ask-sdk-core');
 const mongoose = require('mongoose');
 
-const RegisterIntentHandler = {
-    canHandle(handlerInput) {
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
-            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'RegisterIntent';
-    },
-    handle(handlerInput) {
-        const senha = handlerInput.requestEnvelope.request.intent.slots.senha.value;
-        if (!senha) {
-            const speakOutput = 'Diga registrar a senha... e diga a sua senha';
-            return handlerInput.responseBuilder
-                .speak(speakOutput)
-                .getResponse();
-        } else {
-            const userId = handlerInput.requestEnvelope.context.System.user.userId
-            return handlerInput.responseBuilder
-                .speak(`A sua senha é ${senha}`)
-                .getResponse();
-        }
-    }
-};
+const wfPassSchema = new mongoose.Schema({
+    userId: String,
+    wfPass: String
+});
+
+const wfPasswd = mongoose.model('wfPasswd', wfPassSchema);
+
+mongoose.connect(process.env.MONGODB_URI, {useNewUrlParser: true});
+var db = mongoose.connection;
 
 const QueryIntentHandler = {
     canHandle(handlerInput) {
@@ -32,36 +18,42 @@ const QueryIntentHandler = {
             && Alexa.getIntentName(handlerInput.requestEnvelope) === 'QueryIntent';
     },
     handle(handlerInput) {
-        // console.log(`Debug DotEnv ${process.env.MONGODB_URI}, ${process.env}`)
-        
-        mongoose.connect(process.env.MONGODB_URI, {useNewUrlParser: true});
-        var db = mongoose.connection;
-        db.on('error', console.error.bind(console, 'connection error:'));
-        db.once('open', function() {
-          // we're connected!
-          var kittySchema = new mongoose.Schema({
-              name: String
-            });
-            kittySchema.methods.speak = function () {
-              var greeting = this.name
-                ? "Meow name is " + this.name
-                : "I don't have a name";
-              console.log(greeting);
-            }
-            var Kitten = mongoose.model('Kitten', kittySchema);
-            var fluffy = new Kitten({ name: 'fluffy' });
-            fluffy.speak();
-            fluffy.save(function (err, fluffy) {
-                if (err) return console.error(err);
-                fluffy.speak();
-              });
-        });
-        
         const speakOutput = `Query`;
         return handlerInput.responseBuilder
             .speak(speakOutput)
-            //.reprompt('add a reprompt if you want to keep the session open for the user to respond')
             .getResponse();
+    }
+};
+
+const RegisterIntentHandler = {
+    canHandle(handlerInput) {
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'RegisterIntent';
+    },
+    handle(handlerInput) {
+        let _senha = handlerInput.requestEnvelope.request.intent.slots.senha.value;
+        if (!_senha) {
+            let speakOutput = 'Diga registrar a senha... e diga a sua senha';
+            return handlerInput.responseBuilder
+                .speak(speakOutput)
+                .getResponse();
+        } else {
+            let _userId = handlerInput.requestEnvelope.context.System.user.userId
+            let wfPassObject = new wfPasswd({userId: _userId, wfPass: _senha});
+
+            let speakOutput;
+            try {
+                await wfPassObject.save()
+                speakOutput = `A senha ${_senha} foi registrada com sucesso.`;
+            } catch (error) {
+                console.log(`Erro no salvamento ${error}`);
+                speakOutput = `Ocoreu um erro no salvamento da senha.`;
+            }
+            
+            return handlerInput.responseBuilder
+                .speak(speakOutput)
+                .getResponse();
+        }
     }
 };
 
@@ -74,7 +66,6 @@ const DeleteIntentHandler = {
         const speakOutput = 'Delete';
         return handlerInput.responseBuilder
             .speak(speakOutput)
-            //.reprompt('add a reprompt if you want to keep the session open for the user to respond')
             .getResponse();
     }
 };
