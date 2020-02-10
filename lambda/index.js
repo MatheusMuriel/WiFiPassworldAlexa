@@ -2,15 +2,19 @@ require('dotenv').config();
 const Alexa = require('ask-sdk-core');
 const mongoose = require('mongoose');
 
+let connected = false;
+
+while (!connected) {
+    mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+    mongoose.connection.on('connected', function(){ connected = true })
+}
+console.log('SAiu');
 const wfPassSchema = new mongoose.Schema({
     userId: String,
     wfPass: String
 });
 
 const wfPasswd = mongoose.model('wfPasswd', wfPassSchema);
-
-mongoose.connect(process.env.MONGODB_URI, {useNewUrlParser: true});
-var db = mongoose.connection;
 
 const QueryIntentHandler = {
     canHandle(handlerInput) {
@@ -31,6 +35,7 @@ const RegisterIntentHandler = {
             && Alexa.getIntentName(handlerInput.requestEnvelope) === 'RegisterIntent';
     },
     handle(handlerInput) {
+        let speakOutput;
         let _senha = handlerInput.requestEnvelope.request.intent.slots.senha.value;
         if (!_senha) {
             let speakOutput = 'Diga registrar a senha... e diga a sua senha';
@@ -40,20 +45,11 @@ const RegisterIntentHandler = {
         } else {
             let _userId = handlerInput.requestEnvelope.context.System.user.userId
             let wfPassObject = new wfPasswd({userId: _userId, wfPass: _senha});
-
-            let speakOutput;
-            try {
-                await wfPassObject.save()
-                speakOutput = `A senha ${_senha} foi registrada com sucesso.`;
-            } catch (error) {
-                console.log(`Erro no salvamento ${error}`);
-                speakOutput = `Ocoreu um erro no salvamento da senha.`;
-            }
-            
-            return handlerInput.responseBuilder
-                .speak(speakOutput)
-                .getResponse();
+            wfPassObject.save()
         }
+        return handlerInput.responseBuilder
+                .speak("AAAAA")
+                .getResponse();
     }
 };
 
@@ -128,6 +124,7 @@ const SessionEndedRequestHandler = {
     },
     handle(handlerInput) {
         // Any cleanup logic goes here.
+        console.log(handlerInput.error);
         return handlerInput.responseBuilder.getResponse();
     }
 };
